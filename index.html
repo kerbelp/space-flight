@@ -69,6 +69,61 @@
         </div>
     </div>
     
-    <script src="game.js"></script>
+    <!-- Game script with proper loading and error handling -->
+    <script>
+        // Error handling for script loading
+        window.addEventListener('error', function(event) {
+            console.error('Global error:', event.message, 'at', event.filename, 'line', event.lineno);
+        });
+
+        // Function to initialize the game after all scripts are loaded
+        function initializeGame() {
+            console.log('=== GAME INITIALIZATION STARTED ===');
+            
+            // Verify game functions are available
+            const requiredFunctions = ['init', 'setupUI', 'startGame'];
+            const missingFunctions = requiredFunctions.filter(fn => typeof window[fn] !== 'function');
+            
+            if (missingFunctions.length > 0) {
+                console.error('❌ Missing required functions:', missingFunctions.join(', '));
+                return;
+            }
+            
+            console.log('✅ All required functions are available');
+            
+            try {
+                console.log('Calling init()...');
+                init();
+                console.log('✅ Game initialized successfully');
+            } catch (error) {
+                console.error('❌ Error initializing game:', error);
+                alert('Failed to initialize the game. Please check the console for errors.');
+            }
+        }
+
+        // Load game.js dynamically to ensure proper loading order
+        function loadGameScript() {
+            console.log('Loading game script...');
+            const script = document.createElement('script');
+            script.src = 'game.js';
+            script.onload = function() {
+                console.log('✅ game.js loaded successfully');
+                // Small delay to ensure all functions are available
+                setTimeout(initializeGame, 50);
+            };
+            script.onerror = function() {
+                console.error('❌ Failed to load game.js');
+                alert('Failed to load the game script. Please refresh the page to try again.');
+            };
+            document.body.appendChild(script);
+        }
+
+        // Start loading the game when the DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadGameScript);
+        } else {
+            loadGameScript();
+        }
+    </script>
 </body>
 </html>
