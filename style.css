@@ -7,11 +7,54 @@
 body {
     font-family: 'Arial', sans-serif;
     background: #000;
+    background-image: radial-gradient(circle at center, #0a0a2a 0%, #000 70%);
     color: #fff;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     overflow: hidden;
 }
 
-.game-container {
+/* Screen container */
+.screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    z-index: 10;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
+}
+
+.screen h1 {
+    font-size: 4rem;
+    margin-bottom: 2rem;
+    color: #fff;
+    text-shadow: 0 0 10px #4CAF50, 0 0 20px #4CAF50;
+    letter-spacing: 2px;
+    animation: glow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes glow {
+    from { text-shadow: 0 0 10px #4CAF50, 0 0 20px #4CAF50; }
+    to { text-shadow: 0 0 15px #4CAF50, 0 0 30px #4CAF50, 0 0 40px #4CAF50; }
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* Game container */
+#gameContainer {
     position: relative;
     width: 100vw;
     height: 100vh;
@@ -99,17 +142,153 @@ h2 {
     margin-bottom: 20px;
 }
 
-button {
-    padding: 10px 20px;
-    font-size: 20px;
-    background: #4CAF50;
+/* Buttons */
+.btn {
+    padding: 12px 30px;
+    font-size: 1.2rem;
+    background: linear-gradient(45deg, #4CAF50, #45a049);
     color: white;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: bold;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    background: linear-gradient(45deg, #45a049, #4CAF50);
+}
+
+.btn:active {
+    transform: translateY(1px);
+}
+
+.btn.secondary {
+    background: linear-gradient(45deg, #555, #333);
+    margin-top: 15px;
+}
+
+.btn.secondary:hover {
+    background: linear-gradient(45deg, #666, #444);
+}
+
+/* Mode Selection */
+.mode-selection {
+    background: rgba(20, 20, 40, 0.8);
+    padding: 2rem 3rem;
+    border-radius: 15px;
+    box-shadow: 0 0 30px rgba(76, 175, 80, 0.3);
+    margin-top: 2rem;
+}
+
+.mode-selection h2 {
+    margin-bottom: 2rem;
+    color: #4CAF50;
+    font-size: 1.8rem;
+}
+
+.buttons {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+}
+
+/* Name Input */
+.name-input-container {
+    background: rgba(20, 20, 40, 0.9);
+    padding: 2.5rem;
+    border-radius: 15px;
+    box-shadow: 0 0 30px rgba(76, 175, 80, 0.3);
+    max-width: 500px;
+    width: 90%;
+}
+
+.name-input {
+    margin-bottom: 1.5rem;
+    text-align: left;
+}
+
+.name-input label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+.name-input input[type="text"] {
+    width: 100%;
+    padding: 10px 15px;
+    font-size: 1rem;
+    border: 2px solid #4CAF50;
+    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    margin-bottom: 0.5rem;
+}
+
+.name-input input[type="text"]:focus {
+    outline: none;
+    border-color: #45a049;
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+}
+
+.color-picker {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 0.5rem;
+}
+
+.color-picker input[type="color"] {
+    width: 40px;
+    height: 30px;
     border: none;
     border-radius: 5px;
     cursor: pointer;
-    transition: background 0.3s;
+    background: none;
 }
 
-button:hover {
-    background: #45a049;
+.color-picker input[type="color"]::-webkit-color-swatch {
+    border: 2px solid #4CAF50;
+    border-radius: 5px;
+    padding: 0;
+}
+
+.color-picker input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+#startGameBtn {
+    margin-top: 1.5rem;
+    width: 100%;
+    padding: 15px;
+    font-size: 1.2rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .screen h1 {
+        font-size: 2.5rem;
+    }
+    
+    .buttons {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .mode-selection {
+        padding: 1.5rem;
+    }
+    
+    .name-input-container {
+        padding: 1.5rem;
+    }
 }
