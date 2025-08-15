@@ -14,6 +14,64 @@ const config = {
     heartSpeed: 0.5
 };
 
+// Explosion effect class
+class Explosion {
+    constructor(x, y, size, color = '#FF5722') {
+        this.x = x;
+        this.y = y;
+        this.size = size;
+        this.particles = [];
+        this.duration = 500; // ms
+        this.startTime = Date.now();
+        this.color = color;
+        
+        // Create particles
+        const particleCount = 8 + Math.floor(Math.random() * 5);
+        for (let i = 0; i < particleCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 1 + Math.random() * 3;
+            this.particles.push({
+                x: 0,
+                y: 0,
+                radius: 1 + Math.random() * 3,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                alpha: 1
+            });
+        }
+    }
+    
+    update() {
+        const now = Date.now();
+        const progress = (now - this.startTime) / this.duration;
+        
+        if (progress >= 1) return false;
+        
+        // Update particles
+        this.particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.alpha = 1 - progress;
+        });
+        
+        return true;
+    }
+    
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        
+        this.particles.forEach(p => {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 87, 34, ${p.alpha})`;
+            ctx.fill();
+        });
+        
+        ctx.restore();
+    }
+}
+
 // Game State
 let gameState = {
     score: 0,
@@ -27,7 +85,8 @@ let gameState = {
     lastTime: 0,
     pauseTime: 0,
     pauseStart: 0,
-    isTwoPlayerMode: true
+    isTwoPlayerMode: true,
+    explosions: []
 };
 
 // Player objects
@@ -999,33 +1058,68 @@ function checkPlayerCollision(player) {
 }
 
 function checkBulletCollisions(player) {
-    for (let i = player.bullets.length - 1; i >= 0; i--) {
-        const bullet = player.bullets[i];
-        let bulletHit = false;
-        
-        for (let j = asteroids.length - 1; j >= 0; j--) {
-            const asteroid = asteroids[j];
-            
-            if (
-                bullet.x < asteroid.x + asteroid.width &&
+    const bulletsToRemove = [];
+    const asteroidsToRemove = [];
+    
+    player.bullets.forEach((bullet, bulletIndex) => {
+        asteroids.forEach((asteroid, asteroidIndex) => {
+            // Check collision between bullet and asteroid
+            if (bullet.x < asteroid.x + asteroid.width &&
                 bullet.x + bullet.width > asteroid.x &&
                 bullet.y < asteroid.y + asteroid.height &&
-                bullet.y + bullet.height > asteroid.y
-            ) {
-                // Bullet hit asteroid
-                player.bullets.splice(i, 1);
-                asteroids.splice(j, 1);
-                gameState.score += 10; // Add points for hitting an asteroid
-                bulletHit = true;
-                break;
+                bullet.y + bullet.height > asteroid.y) {
+                
+                // Mark bullet and asteroid for removal
+                bulletsToRemove.push(bulletIndex);
+                if (asteroidsToRemove.indexOf(asteroidIndex) === -1) {
+                    asteroidsToRemove.push(asteroidIndex);
+                    
+                    // Create explosion at asteroid center
+                    const centerX = asteroid.x + asteroid.width / 2;
+                    const centerY = asteroid.y + asteroid.height / 2;
+                    const size = Math.max(asteroid.width, asteroid.height);
+                    createExplosion(centerX, centerY, size);
+                    
+                    // Play explosion sound if available
+                    if (window.AudioContext || window.webkitAudioContext) {
+                        try {
+                            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                            const oscillator = audioCtx.createOscillator();
+                            const gainNode = audioCtx.createGain();
+                            
+                            oscillator.type = 'sine';
+                            oscillator.frequency.setValueAtTime(100, audioCtx.currentTime);
+                            oscillator.frequency.exponentialRampToValueAtTime(0.1, audioCtx.currentTime + 0.5);
+                            
+                            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+                            
+                            oscillator.connect(gainNode);
+                            gainNode.connect(audioCtx.destination);
+                            
+                            oscillator.start();
+                            oscillator.stop(audioCtx.currentTime + 0.5);
+                        } catch (e) {
+                            console.log('Audio error:', e);
+                        }
+                    }
+                }
+                
+                // Increase score
+                gameState.score += 10;
+                updateHUD();
             }
-        }
-        
-        // Remove bullet if it hit something or went off screen
-        if (bulletHit || bullet.x > config.width) {
-            player.bullets.splice(i, 1);
-        }
-    }
+        });
+    });
+    
+    // Remove bullets and asteroids
+    bulletsToRemove.reverse().forEach(index => {
+        player.bullets.splice(index, 1);
+    });
+    
+    asteroidsToRemove.sort((a, b) => b - a).forEach(index => {
+        asteroids.splice(index, 1);
+    });
 }
 
 function checkGameOver() {
@@ -1203,10 +1297,93 @@ function drawBullets(player) {
 }
 
 function drawAsteroids() {
-    ctx.fillStyle = '#795548';
     asteroids.forEach(asteroid => {
-        ctx.fillRect(asteroid.x, asteroid.y, asteroid.width, asteroid.height);
+        // Save the current context
+        ctx.save();
+        
+        // Move to the center of the asteroid for rotation
+        ctx.translate(asteroid.x + asteroid.width / 2, asteroid.y + asteroid.height / 2);
+        
+        // Rotate the asteroid
+        if (!asteroid.rotation) asteroid.rotation = 0;
+        asteroid.rotation += 0.01;
+        ctx.rotate(asteroid.rotation);
+        
+        // Draw asteroid with a rocky texture
+        const size = Math.max(asteroid.width, asteroid.height);
+        const center = { x: 0, y: 0 };
+        const radius = size / 2;
+        
+        // Create a gradient for the asteroid
+        const gradient = ctx.createRadialGradient(
+            center.x - radius/2, center.y - radius/2, 0,
+            center.x, center.y, radius
+        );
+        gradient.addColorStop(0, '#5D4037');
+        gradient.addColorStop(1, '#3E2723');
+        
+        // Draw the main asteroid body
+        ctx.beginPath();
+        
+        // Create an irregular shape for the asteroid
+        const points = [];
+        const numPoints = 8 + Math.floor(Math.random() * 6);
+        for (let i = 0; i < numPoints; i++) {
+            const angle = (i / numPoints) * Math.PI * 2;
+            const distance = radius * (0.7 + Math.random() * 0.3);
+            points.push({
+                x: Math.cos(angle) * distance,
+                y: Math.sin(angle) * distance
+            });
+        }
+        
+        // Draw the irregular shape
+        ctx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i <= points.length; i++) {
+            const p = points[i % points.length];
+            ctx.lineTo(p.x, p.y);
+        }
+        
+        // Add some crater details
+        ctx.fillStyle = gradient;
+        ctx.fill();
+        
+        // Add some crater details
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        for (let i = 0; i < 3; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.random() * radius * 0.5;
+            const craterX = Math.cos(angle) * dist;
+            const craterY = Math.sin(angle) * dist;
+            const craterSize = radius * (0.1 + Math.random() * 0.2);
+            
+            ctx.beginPath();
+            ctx.arc(craterX, craterY, craterSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Restore the context
+        ctx.restore();
     });
+    
+    // Draw explosions
+    updateAndDrawExplosions();
+}
+
+function updateAndDrawExplosions() {
+    // Update explosions
+    gameState.explosions = gameState.explosions.filter(explosion => {
+        return explosion.update();
+    });
+    
+    // Draw all active explosions
+    gameState.explosions.forEach(explosion => {
+        explosion.draw(ctx);
+    });
+}
+
+function createExplosion(x, y, size = 20) {
+    gameState.explosions.push(new Explosion(x, y, size));
 }
 
 function drawHearts() {
